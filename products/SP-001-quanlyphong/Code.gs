@@ -9,7 +9,38 @@
  */
 
 function doGet(e) {
-  // SHARED — khung serve HTML, giống nhau ở mọi sản phẩm
+  // SHARED — Khung serve HTML hoặc REST API GET theo tham số action (hỗ trợ Standalone Web App đọc data)
+  try {
+    if (e && e.parameter && e.parameter.action) {
+      var action = e.parameter.action;
+      var query = e.parameter.query || '';
+      var id = e.parameter.id || '';
+      var result = { success: false, message: 'Action GET không hợp lệ: ' + action };
+
+      if (action === 'layDanhSachPhong') {
+        result = layDanhSachPhong();
+      } else if (action === 'layThongKeDashboard') {
+        result = layThongKeDashboard();
+      } else if (action === 'layDanhSachPhongTrong') {
+        result = layDanhSachPhongTrong();
+      } else if (action === 'layDanhSachKhachThue') {
+        result = layDanhSachKhachThue();
+      } else if (action === 'timKiemKhach') {
+        result = timKiemKhach(query);
+      } else if (action === 'layChiTietPhong') {
+        result = layChiTietPhong(id);
+      }
+
+      return ContentService.createTextOutput(JSON.stringify(result))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      message: 'Lỗi server doGet: ' + err.message
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
   return HtmlService.createHtmlOutputFromFile('index')
     .setTitle('SP-001 — Quản lý phòng & khách thuê')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no')
@@ -17,33 +48,34 @@ function doGet(e) {
 }
 
 function doPost(e) {
-  // SHARED — router chung, parse action + gọi đúng hàm xử lý bên dưới
+  // SHARED — Router REST API chuẩn cho Standalone Web App (GitHub Pages / Local) gửi payload qua fetch(POST)
   try {
-    var payload = JSON.parse(e.postData.contents);
+    var rawContents = e && e.postData ? e.postData.contents : '{}';
+    var payload = JSON.parse(rawContents);
     var action = payload.action;
-    var data = payload.data;
-    var result = { success: false, message: 'Action không hợp lệ: ' + action };
+    var data = payload.data || {};
+    var result = { success: false, message: 'Action POST không hợp lệ: ' + action };
 
     if (action === 'layDanhSachPhong') {
       result = layDanhSachPhong();
     } else if (action === 'themPhong') {
       result = themPhong(data);
     } else if (action === 'suaPhong') {
-      result = suaPhong(data.id, data);
+      result = suaPhong(data.id || (typeof data === 'string' ? data : ''), data);
     } else if (action === 'xoaPhong') {
-      result = xoaPhong(data.id);
+      result = xoaPhong(data.id || (typeof data === 'string' ? data : ''));
     } else if (action === 'themKhachThue') {
       result = themKhachThue(data);
     } else if (action === 'suaKhachThue') {
-      result = suaKhachThue(data.id, data);
+      result = suaKhachThue(data.id || (typeof data === 'string' ? data : ''), data);
     } else if (action === 'traPhong') {
-      result = traPhong(data.khachThueId);
+      result = traPhong(data.khachThueId || (typeof data === 'string' ? data : ''));
     } else if (action === 'timKiemKhach') {
-      result = timKiemKhach(data.query);
+      result = timKiemKhach(data.query || (typeof data === 'string' ? data : ''));
     } else if (action === 'layThongKeDashboard') {
       result = layThongKeDashboard();
     } else if (action === 'layChiTietPhong') {
-      result = layChiTietPhong(data.id);
+      result = layChiTietPhong(data.id || (typeof data === 'string' ? data : ''));
     } else if (action === 'layDanhSachPhongTrong') {
       result = layDanhSachPhongTrong();
     } else if (action === 'layDanhSachKhachThue') {
@@ -55,7 +87,7 @@ function doPost(e) {
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({
       success: false,
-      message: 'Lỗi server router: ' + err.message
+      message: 'Lỗi server router doPost: ' + err.message
     })).setMimeType(ContentService.MimeType.JSON);
   }
 }
@@ -294,7 +326,6 @@ function themKhachThue(data) {
       return { success: false, message: 'Phòng ' + phongChon.TenPhong + ' hiện đang có khách thuê. Không thể thêm khách mới.' };
     }
     
-    // Kiểm tra thêm xem có khách nào đang thuê phòng này không (double safety check)
     var danhSachKhach = docBangThanhJSON('KhachThue');
     for (var k = 0; k < danhSachKhach.length; k++) {
       if (String(danhSachKhach[k].PhongID).trim() === phongId && danhSachKhach[k].TrangThai === 'Đang thuê') {
@@ -362,7 +393,6 @@ function suaKhachThue(id, data) {
       updateFields.NgayVaoO = String(data.NgayVaoO).trim();
     }
     
-    // Nếu chuyển phòng khi khách đang thuê
     if (data.PhongID && String(data.PhongID).trim() !== String(khachCu.PhongID).trim() && khachCu.TrangThai === 'Đang thuê') {
       var newPhongId = String(data.PhongID).trim();
       var oldPhongId = String(khachCu.PhongID).trim();
@@ -457,7 +487,6 @@ function timKiemKhach(query) {
       }
     }
     
-    // Sắp xếp người đang thuê lên đầu
     result.sort(function(a, b) {
       if (a.TrangThai === 'Đang thuê' && b.TrangThai !== 'Đang thuê') return -1;
       if (a.TrangThai !== 'Đang thuê' && b.TrangThai === 'Đang thuê') return 1;

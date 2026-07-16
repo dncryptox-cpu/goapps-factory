@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    /* SHARED — style nền, ứng viên tách shared-frontend-kit */
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; margin: 0; background: #f4f4f2; color: #222; }
+    header { background: #534AB7; color: #fff; padding: 14px 16px; font-size: 18px; font-weight: bold; }
+    nav { display: flex; background: #3C3489; }
+    nav button { flex: 1; padding: 12px 0; background: none; border: none; color: #d8d6f6; font-size: 13px; cursor: pointer; }
+    nav button.active { color: #fff; font-weight: bold; border-bottom: 3px solid #fff; }
+    main { padding: 12px; padding-bottom: 80px; }
+    .card { background: #fff; border-radius: 10px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+    .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+    .stat-grid .card { text-align: center; }
+    .stat-num { font-size: 22px; font-weight: bold; color: #534AB7; }
+    .stat-label { font-size: 12px; color: #777; margin-top: 2px; }
+    .room-row { display: flex; justify-content: space-between; align-items: center; }
+    .room-row .name { font-weight: bold; }
+    .room-row .sub { font-size: 12px; color: #777; }
+    .badge { font-size: 11px; padding: 3px 8px; border-radius: 10px; }
+    .badge.trong { background: #E1F5EE; color: #0F6E56; }
+    .badge.dathue { background: #FAEEDA; color: #854F0B; }
+    .badge.datraphong { background: #F1EFE8; color: #5F5E5A; }
+    .btn { display: inline-block; padding: 10px 16px; border-radius: 8px; border: none; background: #534AB7; color: #fff; font-size: 14px; cursor: pointer; }
+    .btn.secondary { background: #fff; color: #534AB7; border: 1px solid #534AB7; }
+    .btn.danger { background: #D85A30; }
+    .fab { position: fixed; bottom: 16px; right: 16px; width: 52px; height: 52px; border-radius: 50%; background: #534AB7; color: #fff; font-size: 26px; border: none; box-shadow: 0 2px 6px rgba(0,0,0,0.25); cursor: pointer; }
+    input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; margin-bottom: 10px; }
+    label { font-size: 12px; color: #555; }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: flex-end; justify-content: center; z-index: 10; }
+    .sheet { background: #fff; width: 100%; max-width: 480px; border-radius: 16px 16px 0 0; padding: 18px; max-height: 85vh; overflow-y: auto; }
+    .sheet h3 { margin-top: 0; }
+    .row-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .search-box { margin-bottom: 12px; }
+    .error-msg { color: #A32D2D; font-size: 13px; margin-bottom: 8px; }
+    .empty { text-align: center; color: #999; padding: 24px 0; font-size: 13px; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <header>Quản lý phòng &amp; khách thuê</header>
+  <nav>
+    <button id="tab-dashboard" class="active" onclick="chuyenTab('dashboard')">Dashboard</button>
+    <button id="tab-phong" onclick="chuyenTab('phong')">Danh sách phòng</button>
+    <button id="tab-khach" onclick="chuyenTab('khach')">Khách thuê</button>
+  </nav>
+
+  <main>
+    <section id="view-dashboard">
+      <div class="stat-grid">
+        <div class="card"><div class="stat-num" id="stat-tong">–</div><div class="stat-label">Tổng phòng</div></div>
+        <div class="card"><div class="stat-num" id="stat-trong">–</div><div class="stat-label">Phòng trống</div></div>
+        <div class="card"><div class="stat-num" id="stat-dathue">–</div><div class="stat-label">Đã thuê</div></div>
+      </div>
+    </section>
+
+    <section id="view-phong" hidden>
+      <div id="danh-sach-phong"></div>
+    </section>
+
+    <section id="view-khach" hidden>
+      <input class="search-box" id="o-tim-khach" placeholder="Tìm theo tên hoặc SĐT..." oninput="timKhach()">
+      <div id="danh-sach-khach"></div>
+    </section>
+  </main>
+
+  <button class="fab" onclick="moFormThemPhong()">+</button>
+
+  <!-- Modal: thêm phòng -->
+  <div class="overlay" id="modal-them-phong" hidden>
+    <div class="sheet">
+      <h3>Thêm phòng mới</h3>
+      <div class="error-msg" id="loi-them-phong" hidden></div>
+      <label>Tên phòng</label>
+      <input id="tp-ten" placeholder="Phòng 101">
+      <label>Giá thuê (VNĐ/tháng)</label>
+      <input id="tp-gia" type="number" placeholder="2500000">
+      <div class="row-actions">
+        <button class="btn secondary" onclick="dongModal('modal-them-phong')">Hủy</button>
+        <button class="btn" onclick="luuPhong()">Lưu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: thêm khách -->
+  <div class="overlay" id="modal-them-khach" hidden>
+    <div class="sheet">
+      <h3>Thêm khách thuê</h3>
+      <div class="error-msg" id="loi-them-khach" hidden></div>
+      <label>Phòng (chỉ hiện phòng trống)</label>
+      <select id="tk-phong"></select>
+      <label>Họ tên</label>
+      <input id="tk-hoten" placeholder="Nguyễn Văn A">
+      <label>Số điện thoại</label>
+      <input id="tk-sdt" placeholder="09xxxxxxxx">
+      <label>Ngày vào ở</label>
+      <input id="tk-ngay" type="date">
+      <div class="row-actions">
+        <button class="btn secondary" onclick="dongModal('modal-them-khach')">Hủy</button>
+        <button class="btn" onclick="luuKhach()">Lưu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: chi tiết phòng -->
+  <div class="overlay" id="modal-chi-tiet" hidden>
+    <div class="sheet" id="noi-dung-chi-tiet"></div>
+  </div>
+
+  <script>
+    // SHARED — bootstrap, điều hướng tab, gọi server, xử lý lỗi chung
+    var phongDangXem = null;
+
+    function chuyenTab(ten) {
+      ['dashboard', 'phong', 'khach'].forEach(function (t) {
+        document.getElementById('view-' + t).hidden = (t !== ten);
+        document.getElementById('tab-' + t).classList.toggle('active', t === ten);
+      });
+      if (ten === 'dashboard') taiDashboard();
+      if (ten === 'phong') taiDanhSachPhong();
+      if (ten === 'khach') timKhach();
+    }
+
+    function dongModal(id) { document.getElementById(id).hidden = true; }
+
+    function baoLoi(elId, err) {
+      var el = document.getElementById(elId);
+      el.textContent = (err && err.message) ? err.message : String(err);
+      el.hidden = false;
+    }
+
+    // ---- Dashboard ----
+    // PRODUCT-SPECIFIC
+    function taiDashboard() {
+      google.script.run.withSuccessHandler(function (s) {
+        document.getElementById('stat-tong').textContent = s.tongPhong;
+        document.getElementById('stat-trong').textContent = s.phongTrong;
+        document.getElementById('stat-dathue').textContent = s.phongDaThue;
+      }).layThongKeDashboard();
+    }
+
+    // ---- Danh sách phòng ----
+    // PRODUCT-SPECIFIC
+    function taiDanhSachPhong() {
+      google.script.run.withSuccessHandler(renderDanhSachPhong).layDanhSachPhong();
+    }
+
+    function renderDanhSachPhong(phongs) {
+      var el = document.getElementById('danh-sach-phong');
+      if (!phongs.length) { el.innerHTML = '<div class="empty">Chưa có phòng nào — bấm + để thêm</div>'; return; }
+      el.innerHTML = phongs.map(function (p) {
+        var badgeClass = p.TrangThai === 'Trống' ? 'trong' : 'dathue';
+        var sub = p.KhachHienTai ? ('Khách: ' + p.KhachHienTai) : (Number(p.GiaThue).toLocaleString('vi-VN') + ' đ/tháng');
+        return '<div class="card room-row" onclick="moChiTietPhong(\'' + p.ID + '\')">' +
+          '<div><div class="name">' + p.TenPhong + '</div><div class="sub">' + sub + '</div></div>' +
+          '<span class="badge ' + badgeClass + '">' + p.TrangThai + '</span>' +
+          '</div>';
+      }).join('');
+    }
+
+    function moFormThemPhong() {
+      document.getElementById('tp-ten').value = '';
+      document.getElementById('tp-gia').value = '';
+      document.getElementById('loi-them-phong').hidden = true;
+      document.getElementById('modal-them-phong').hidden = false;
+    }
+
+    function luuPhong() {
+      var data = { TenPhong: document.getElementById('tp-ten').value.trim(), GiaThue: document.getElementById('tp-gia').value };
+      google.script.run
+        .withSuccessHandler(function () { dongModal('modal-them-phong'); taiDanhSachPhong(); taiDashboard(); })
+        .withFailureHandler(function (err) { baoLoi('loi-them-phong', err); })
+        .themPhong(data);
+    }
+
+    // ---- Chi tiết phòng ----
+    // PRODUCT-SPECIFIC
+    function moChiTietPhong(phongId) {
+      phongDangXem = phongId;
+      google.script.run.withSuccessHandler(renderChiTietPhong).layChiTietPhong(phongId);
+    }
+
+    function renderChiTietPhong(data) {
+      var p = data.phong;
+      var khachDangO = data.lichSuKhach.filter(function (k) { return k.TrangThai === 'Đang thuê'; })[0];
+      var lichSuHtml = data.lichSuKhach.map(function (k) {
+        return '<div class="card"><div class="name">' + k.HoTen + '</div>' +
+          '<div class="sub">' + k.SDT + ' — ' + k.TrangThai + '</div></div>';
+      }).join('') || '<div class="empty">Chưa có khách nào từng ở phòng này</div>';
+
+      var traPhongBtn = khachDangO
+        ? '<button class="btn danger" onclick="thucHienTraPhong(\'' + khachDangO.ID + '\')">Trả phòng</button>'
+        : '<button class="btn" onclick="dongModal(\'modal-chi-tiet\'); moFormThemKhachChoPhong(\'' + p.ID + '\')">Thêm khách vào phòng này</button>';
+
+      document.getElementById('noi-dung-chi-tiet').innerHTML =
+        '<h3>' + p.TenPhong + '</h3>' +
+        '<p class="sub">' + Number(p.GiaThue).toLocaleString('vi-VN') + ' đ/tháng — <span class="badge ' + (p.TrangThai === 'Trống' ? 'trong' : 'dathue') + '">' + p.TrangThai + '</span></p>' +
+        traPhongBtn +
+        '<h3 style="margin-top:16px">Lịch sử khách thuê</h3>' + lichSuHtml +
+        '<div class="row-actions"><button class="btn secondary" onclick="dongModal(\'modal-chi-tiet\')">Đóng</button></div>';
+      document.getElementById('modal-chi-tiet').hidden = false;
+    }
+
+    function thucHienTraPhong(khachThueId) {
+      google.script.run
+        .withSuccessHandler(function () {
+          dongModal('modal-chi-tiet');
+          taiDanhSachPhong();
+          taiDashboard();
+        })
+        .withFailureHandler(function (err) { alert(err.message || err); })
+        .traPhong(khachThueId);
+    }
+
+    // ---- Thêm khách ----
+    // PRODUCT-SPECIFIC
+    function moFormThemKhachChoPhong(phongId) {
+      document.getElementById('tk-hoten').value = '';
+      document.getElementById('tk-sdt').value = '';
+      document.getElementById('tk-ngay').valueAsDate = new Date();
+      document.getElementById('loi-them-khach').hidden = true;
+      google.script.run.withSuccessHandler(function (phongTrong) {
+        var sel = document.getElementById('tk-phong');
+        sel.innerHTML = phongTrong.map(function (p) { return '<option value="' + p.ID + '">' + p.TenPhong + '</option>'; }).join('');
+        if (phongId) sel.value = phongId;
+        document.getElementById('modal-them-khach').hidden = false;
+      }).layDanhSachPhongTrong();
+    }
+
+    function luuKhach() {
+      var data = {
+        PhongID: document.getElementById('tk-phong').value,
+        HoTen: document.getElementById('tk-hoten').value.trim(),
+        SDT: document.getElementById('tk-sdt').value.trim(),
+        NgayVaoO: document.getElementById('tk-ngay').value
+      };
+      google.script.run
+        .withSuccessHandler(function () { dongModal('modal-them-khach'); taiDanhSachPhong(); taiDashboard(); })
+        .withFailureHandler(function (err) { baoLoi('loi-them-khach', err); })
+        .themKhachThue(data);
+    }
+
+    // ---- Danh sách khách thuê ----
+    // PRODUCT-SPECIFIC
+    function timKhach() {
+      var q = document.getElementById('o-tim-khach').value;
+      google.script.run.withSuccessHandler(renderDanhSachKhach).timKiemKhach(q);
+    }
+
+    function renderDanhSachKhach(khachs) {
+      var el = document.getElementById('danh-sach-khach');
+      if (!khachs.length) { el.innerHTML = '<div class="empty">Không tìm thấy khách nào</div>'; return; }
+      el.innerHTML = khachs.map(function (k) {
+        var badgeClass = k.TrangThai === 'Đang thuê' ? 'dathue' : 'datraphong';
+        return '<div class="card room-row">' +
+          '<div><div class="name">' + k.HoTen + '</div><div class="sub">' + k.SDT + '</div></div>' +
+          '<span class="badge ' + badgeClass + '">' + k.TrangThai + '</span>' +
+          '</div>';
+      }).join('');
+    }
+
+    // ---- Khởi động ----
+    taiDashboard();
+  </script>
+</body>
+</html>

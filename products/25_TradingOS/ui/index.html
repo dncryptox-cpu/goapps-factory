@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TradingOS — Nhật Ký Trading SaaS & AI Vision</title>
+  <meta name="description" content="Hệ thống quản lý nhật ký giao dịch TradingOS v2 SaaS đa khách hàng — tự động tính R:R, quản lý vốn 5%, hỗ trợ AI đọc chart Entry/TP/SL.">
+  
+  <!-- CSS Styles -->
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Alpine.js Core -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body x-data="appShared()">
+
+  <!-- 1. LOGIN SCREEN (WHEN NOT LOGGED IN) -->
+  <div x-show="!isLoggedIn" x-cloak class="login-overlay" x-data="dangNhapModule()">
+    <div class="glass-card login-card">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <div class="brand-icon" style="margin: 0 auto 12px auto; width: 48px; height: 48px; font-size: 20px;">T25</div>
+        <h2 style="font-family: var(--font-heading); font-size: 24px; font-weight: 800; color: #fff;">TradingOS SaaS v2</h2>
+        <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Đăng nhập hệ thống nhật ký giao dịch & AI Vision</p>
+      </div>
+
+      <form @submit.prevent="submitLogin()">
+        <template x-if="errorMessage">
+          <div style="background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.4); color: #f43f5e; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px;">
+            ⚠️ <span x-text="errorMessage"></span>
+          </div>
+        </template>
+
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label" for="login-email">Email Khách Hàng</label>
+          <input id="login-email" type="email" class="form-control" placeholder="trader1@godnc.com" x-model="form.email" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 24px;">
+          <label class="form-label" for="login-password">Mật Khẩu</label>
+          <input id="login-password" type="password" class="form-control" placeholder="••••••••" x-model="form.password" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 15px;" :disabled="isLoading">
+          <span x-text="isLoading ? '⏳ Đang đăng nhập...' : '🔑 Đăng Nhập Hệ Thống'"></span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. MAIN APP DASHBOARD (WHEN LOGGED IN) -->
+  <div x-show="isLoggedIn" x-cloak>
+    
+    <!-- HEADER -->
+    <header class="app-header">
+      <div class="header-container">
+        <div class="brand-logo">
+          <div class="brand-icon">T25</div>
+          <div>
+            <h1 class="brand-name">TradingOS</h1>
+            <span style="font-size: 11px; color: var(--text-dim); display: block; margin-top: -2px;">Factory OS #25 • SaaS Multi-Tenant</span>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="nav-tabs">
+          <button 
+            id="nav-btn-nhatky"
+            class="nav-tab-btn" 
+            :class="{ 'active': activeModule === 'nhatKy' }"
+            @click="activeModule = 'nhatKy'">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+            Nhật Ký Lệnh
+          </button>
+          <button 
+            id="nav-btn-taolenh"
+            class="nav-tab-btn" 
+            :class="{ 'active': activeModule === 'taoLenh' }"
+            @click="activeModule = 'taoLenh'">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Ghi Nhận Lệnh Mới
+          </button>
+          <button 
+            id="nav-btn-caidat"
+            class="nav-tab-btn" 
+            :class="{ 'active': activeModule === 'caiDat' }"
+            @click="activeModule = 'caiDat'">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            Cấu Hình
+          </button>
+        </nav>
+
+        <!-- User Session Indicator -->
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="font-size: 12.5px; color: var(--text-muted);">
+            👤 <strong style="color: #fff;" x-text="currentUser.ho_ten"></strong>
+          </span>
+          <button class="btn btn-sm btn-secondary" @click="logout()" title="Đăng xuất">
+            🚪 Thoát
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="main-content">
+
+      <!-- MODULE 1: THỐNG KÊ (READ-ONLY FROM db.stats ACCORDING TO STANDARD #1 & #2) -->
+      <section id="module-thongke" x-data="thongKeModule()">
+        <div class="stats-grid">
+          
+          <!-- CARD 1: VỐN HIỆN TẠI -->
+          <div class="glass-card stat-card accent-capital">
+            <div class="stat-label">Vốn Hiện Tại</div>
+            <div class="stat-value" x-text="'$' + (stats.von_hien_tai || 0).toLocaleString('en-US')"></div>
+            <div class="stat-subtext">
+              <span>Risk lệnh tiếp:</span>
+              <strong x-text="'$' + (stats.risk_lenh_tiep || 0) + ' (' + (config.risk_percent_mac_dinh || 5) + '%)'"></strong>
+            </div>
+          </div>
+
+          <!-- CARD 2: WIN RATE -->
+          <div class="glass-card stat-card accent-winrate">
+            <div class="stat-label">Tỷ Lệ Thắng (Win Rate)</div>
+            <div class="stat-value" x-text="(stats.win_rate || 0) + '%'"></div>
+            <div class="stat-subtext">
+              <span>Tổng lệnh đã đóng:</span>
+              <strong x-text="(stats.tong_lenh_dong || 0) + ' lệnh'"></strong>
+            </div>
+          </div>
+
+          <!-- CARD 3: LỢI NHUẬN RÒNG ($) -->
+          <div class="glass-card stat-card accent-pnl">
+            <div class="stat-label">Lợi Nhuận Ròng (USD)</div>
+            <div class="stat-value" 
+                 :style="{ color: (stats.net_pnl_usd || 0) >= 0 ? '#10b981' : '#f43f5e' }"
+                 x-text="((stats.net_pnl_usd || 0) >= 0 ? '+$' : '-$') + Math.abs(stats.net_pnl_usd || 0).toLocaleString('en-US')">
+            </div>
+            <div class="stat-subtext">
+              <span>Profit Factor:</span>
+              <strong x-text="stats.profit_factor || 0"></strong>
+            </div>
+          </div>
+
+          <!-- CARD 4: LỢI NHUẬN R RÒNG -->
+          <div class="glass-card stat-card accent-r">
+            <div class="stat-label">Lợi Nhuận R Ròng</div>
+            <div class="stat-value" 
+                 :style="{ color: (stats.net_pnl_r || 0) >= 0 ? '#10b981' : '#f43f5e' }"
+                 x-text="((stats.net_pnl_r || 0) >= 0 ? '+' : '') + (stats.net_pnl_r || 0) + ' R'">
+            </div>
+            <div class="stat-subtext">
+              <span>Vốn gốc ban đầu:</span>
+              <strong x-text="'$' + (config.von_goc || 10000).toLocaleString('en-US')"></strong>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- MODULE 2: NHẬT KÝ LỆNH (CARD LIST + FILTERS + CLOSE MODAL) -->
+      <section id="module-nhatky" x-show="activeModule === 'nhatKy'" x-data="nhatKyModule()">
+        
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+          <!-- Main Filter Controls Row 1: Search, Status, Direction -->
+          <div class="filter-row primary-row">
+            <!-- Search Box -->
+            <div class="search-box">
+              <svg class="search-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+              <input 
+                id="input-search-pair"
+                type="text" 
+                placeholder="Tìm cặp tiền, setup, ghi chú, ID..." 
+                x-model="searchQuery">
+            </div>
+
+            <!-- Status Filters -->
+            <div class="filter-group">
+              <button class="filter-btn" :class="{ 'active': filterStatus === 'ALL' }" @click="filterStatus = 'ALL'">Tất Cả</button>
+              <button class="filter-btn" :class="{ 'active': filterStatus === 'DANG_CHAY' }" @click="filterStatus = 'DANG_CHAY'">⏳ Đang Chạy</button>
+              <button class="filter-btn" :class="{ 'active': filterStatus === 'WIN' }" @click="filterStatus = 'WIN'">💚 WIN</button>
+              <button class="filter-btn" :class="{ 'active': filterStatus === 'LOSS' }" @click="filterStatus = 'LOSS'">❤️ LOSS</button>
+              <button class="filter-btn" :class="{ 'active': filterStatus === 'BE' }" @click="filterStatus = 'BE'">🟣 BE</button>
+            </div>
+
+            <!-- Direction Filters -->
+            <div class="filter-group">
+              <button class="filter-btn" :class="{ 'active': filterHuong === 'ALL' }" @click="filterHuong = 'ALL'">Mọi Hướng</button>
+              <button class="filter-btn filter-btn-long" :class="{ 'active': filterHuong === 'LONG' }" @click="filterHuong = 'LONG'">🟢 LONG</button>
+              <button class="filter-btn filter-btn-short" :class="{ 'active': filterHuong === 'SHORT' }" @click="filterHuong = 'SHORT'">🔴 SHORT</button>
+            </div>
+          </div>
+
+          <!-- Filter Controls Row 2: Setup, Mindset, Date Range, Sort -->
+          <div class="filter-row secondary-row">
+            
+            <!-- Setup Filter Dropdown -->
+            <div class="filter-select-wrapper">
+              <label class="filter-select-label">🎯 Setup:</label>
+              <select class="filter-select" x-model="filterSetup">
+                <option value="ALL">Tất cả Setup</option>
+                <template x-for="s in availableSetups" :key="s">
+                  <option :value="s" x-text="s"></option>
+                </template>
+              </select>
+            </div>
+
+            <!-- Mindset Filter Dropdown -->
+            <div class="filter-select-wrapper">
+              <label class="filter-select-label">🧘 Tâm lý:</label>
+              <select class="filter-select" x-model="filterTamLy">
+                <option value="ALL">Tất cả Tâm lý</option>
+                <template x-for="m in availableMindsets" :key="m">
+                  <option :value="m" x-text="m"></option>
+                </template>
+              </select>
+            </div>
+
+            <!-- Time Range Filter Dropdown -->
+            <div class="filter-select-wrapper">
+              <label class="filter-select-label">📅 Thời gian:</label>
+              <select class="filter-select" x-model="filterTimeRange">
+                <option value="ALL">Tất cả thời gian</option>
+                <option value="TODAY">Hôm nay</option>
+                <option value="7DAYS">7 ngày gần nhất</option>
+                <option value="30DAYS">30 ngày gần nhất</option>
+                <option value="CUSTOM">Tùy chọn ngày...</option>
+              </select>
+            </div>
+
+            <!-- Custom Date Inputs -->
+            <template x-if="filterTimeRange === 'CUSTOM'">
+              <div class="filter-custom-date">
+                <input type="date" class="filter-date-input" x-model="customStartDate" title="Từ ngày">
+                <span style="color: var(--text-dim);">→</span>
+                <input type="date" class="filter-date-input" x-model="customEndDate" title="Đến ngày">
+              </div>
+            </template>
+
+            <!-- Sort Selector -->
+            <div class="filter-select-wrapper" style="margin-left: auto;">
+              <label class="filter-select-label">⇅ Sắp xếp:</label>
+              <select class="filter-select" x-model="sortBy">
+                <option value="NEWEST">Mới nhất trước</option>
+                <option value="OLDEST">Cũ nhất trước</option>
+                <option value="PNL_DESC">PnL ($) Cao -> Thấp</option>
+                <option value="PNL_ASC">PnL ($) Thấp -> Cao</option>
+                <option value="RR_DESC">R:R Ratio Cao -> Thấp</option>
+              </select>
+            </div>
+
+          </div>
+
+          <!-- Filter Summary & Stats Bar -->
+          <div class="filter-summary-bar">
+            <div class="filter-result-count">
+              <span>Hiển thị <strong style="color: #fff;" x-text="filteredTrades.length"></strong> / <span x-text="allTrades.length"></span> lệnh</span>
+              <template x-if="hasActiveFilters">
+                <span class="active-filter-tag">
+                  🔍 Bộ lọc đang bật
+                  <button class="reset-filter-btn" @click="resetFilters()" title="Xóa toàn bộ lọc">✕ Xóa lọc</button>
+                </span>
+              </template>
+            </div>
+
+            <!-- Filtered Trades Sub-stats -->
+            <template x-if="hasActiveFilters && filteredTrades.length > 0">
+              <div class="filtered-stats-pills">
+                <span class="stat-pill">Winrate Lọc: <strong x-text="filteredStats.winRate + '%'"></strong></span>
+                <span class="stat-pill" :style="{ color: filteredStats.netPnlUsd >= 0 ? '#10b981' : '#f43f5e' }">
+                  PnL Lọc: <strong x-text="(filteredStats.netPnlUsd >= 0 ? '+$' : '-$') + Math.abs(filteredStats.netPnlUsd)"></strong> (<span x-text="(filteredStats.netPnlR >= 0 ? '+' : '') + filteredStats.netPnlR + 'R'"></span>)
+                </span>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Trade Cards Grid -->
+        <div class="trades-list">
+          <template x-for="trade in filteredTrades" :key="trade.id">
+            <article class="trade-card">
+              
+              <!-- Header: Symbol, Direction, Status -->
+              <div class="trade-header">
+                <div class="trade-title">
+                  <span 
+                    class="badge" 
+                    :class="trade.huong === 'LONG' ? 'badge-long' : 'badge-short'"
+                    x-text="trade.huong">
+                  </span>
+                  <span class="pair-symbol" x-text="trade.cap_tien"></span>
+                </div>
+                <span 
+                  class="badge"
+                  :class="{
+                    'badge-running': trade.trang_thai === 'DANG_CHAY',
+                    'badge-win': trade.trang_thai === 'WIN',
+                    'badge-loss': trade.trang_thai === 'LOSS',
+                    'badge-be': trade.trang_thai === 'BE'
+                  }"
+                  x-text="trade.trang_thai === 'DANG_CHAY' ? 'Đang Chạy' : trade.trang_thai">
+                </span>
+              </div>
+
+              <!-- Date, ID, Setup & Mindset -->
+              <div style="font-size: 11.5px; color: var(--text-dim); margin-bottom: 12px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px;">
+                <span x-text="trade.ngay_gio"></span>
+                <div>
+                  <span class="quick-chip" style="font-size: 10px; padding: 2px 6px;" x-text="trade.setup_tag || trade.loai_setup || 'Price Action'"></span>
+                  <span style="font-family: monospace; margin-left: 4px;" x-text="trade.id"></span>
+                </div>
+              </div>
+
+              <!-- Metrics Grid -->
+              <div class="trade-metrics-grid">
+                <div class="metric-item">
+                  <span class="metric-label">Entry</span>
+                  <span class="metric-val" x-text="trade.entry_price"></span>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Stop Loss</span>
+                  <span class="metric-val" style="color: var(--accent-short);" x-text="trade.stop_loss"></span>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Take Profit</span>
+                  <span class="metric-val" style="color: var(--accent-long);" x-text="trade.take_profit"></span>
+                </div>
+                <div class="metric-item" style="margin-top: 6px;">
+                  <span class="metric-label">Tỷ lệ R:R</span>
+                  <span class="metric-val" style="color: var(--status-running);" x-text="'1:' + (trade.rr_ratio || 0)"></span>
+                </div>
+                <div class="metric-item" style="margin-top: 6px;">
+                  <span class="metric-label">Khối Lượng</span>
+                  <span class="metric-val" x-text="'$' + (trade.volume_usd || 0).toLocaleString()"></span>
+                </div>
+                <div class="metric-item" style="margin-top: 6px;">
+                  <span class="metric-label">PnL Thực Tế</span>
+                  <span 
+                    class="metric-val" 
+                    :class="{
+                      'text-win': trade.pnl_usd > 0,
+                      'text-loss': trade.pnl_usd < 0,
+                      'text-be': trade.pnl_usd === 0 && trade.trang_thai !== 'DANG_CHAY'
+                    }"
+                    x-text="trade.trang_thai === 'DANG_CHAY' ? '---' : (trade.pnl_usd >= 0 ? '+' : '') + trade.pnl_usd + '$ (' + (trade.pnl_r >= 0 ? '+' : '') + trade.pnl_r + 'R)'">
+                  </span>
+                </div>
+              </div>
+
+              <!-- Notes if any -->
+              <template x-if="trade.ghi_chu_review || trade.ghi_chu">
+                <p style="font-size: 12.5px; color: var(--text-muted); font-style: italic; margin-bottom: 12px; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px;" x-text="trade.ghi_chu_review || trade.ghi_chu"></p>
+              </template>
+
+              <!-- Card Footer: Timeframe chart links & action buttons -->
+              <div class="trade-footer">
+                <div class="photo-chips">
+                  <template x-if="trade.anh_htf">
+                    <a class="photo-chip" @click.prevent="openImageModal('Khung Lớn (HTF) — ' + trade.cap_tien, trade.anh_htf)">HTF Chart</a>
+                  </template>
+                  <template x-if="trade.anh_mtf">
+                    <a class="photo-chip" @click.prevent="openImageModal('Khung Trung (MTF) — ' + trade.cap_tien, trade.anh_mtf)">MTF Chart</a>
+                  </template>
+                  <template x-if="trade.anh_ltf">
+                    <a class="photo-chip" @click.prevent="openImageModal('Khung Vào Lệnh (LTF) — ' + trade.cap_tien, trade.anh_ltf)">LTF Chart</a>
+                  </template>
+                </div>
+
+                <!-- Action buttons for Running trades -->
+                <div class="action-btns">
+                  <template x-if="trade.trang_thai === 'DANG_CHAY'">
+                    <div style="display: flex; gap: 4px;">
+                      <button class="btn btn-sm btn-win" @click="openCloseModal(trade, 'WIN')">WIN</button>
+                      <button class="btn btn-sm btn-be" @click="openCloseModal(trade, 'BE')">BE</button>
+                      <button class="btn btn-sm btn-loss" @click="openCloseModal(trade, 'LOSS')">LOSS</button>
+                    </div>
+                  </template>
+                  <button class="btn btn-sm btn-danger" @click="deleteTrade(trade)" title="Xoá lệnh">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                  </button>
+                </div>
+              </div>
+
+            </article>
+          </template>
+        </div>
+
+        <!-- Empty State -->
+        <template x-if="filteredTrades.length === 0">
+          <div class="empty-state">
+            <div class="empty-state-icon">📊</div>
+            <h3>Chưa có lệnh nào phù hợp</h3>
+            <p style="margin-top: 6px;">Hãy bấm "Ghi Nhận Lệnh Mới" để ghi lại giao dịch đầu tiên của bạn.</p>
+          </div>
+        </template>
+
+        <!-- CLOSE TRADE MODAL -->
+        <div class="modal-overlay" x-show="closeModal.show" x-transition.opacity @click.self="closeModal.show = false">
+          <div class="modal-card">
+            <div class="modal-header">
+              <h3 class="modal-title" x-text="'Đóng Lệnh ' + (closeModal.trade ? closeModal.trade.cap_tien : '')"></h3>
+              <button class="close-modal-btn" @click="closeModal.show = false">&times;</button>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 16px;">
+              <label class="form-label">Trạng Thái Kết Quả</label>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn" :class="closeModal.targetStatus === 'WIN' ? 'btn-win' : 'btn-secondary'" @click="closeModal.targetStatus = 'WIN'">WIN</button>
+                <button class="btn" :class="closeModal.targetStatus === 'BE' ? 'btn-be' : 'btn-secondary'" @click="closeModal.targetStatus = 'BE'">BE (Hòa)</button>
+                <button class="btn" :class="closeModal.targetStatus === 'LOSS' ? 'btn-loss' : 'btn-secondary'" @click="closeModal.targetStatus = 'LOSS'">LOSS</button>
+              </div>
+            </div>
+
+            <div class="form-grid" style="margin-bottom: 20px;">
+              <div class="form-group">
+                <label class="form-label">PnL Thực Tế (USD)</label>
+                <input id="input-close-pnlusd" type="number" step="any" class="form-control" x-model="closeModal.pnlUsd">
+              </div>
+              <div class="form-group">
+                <label class="form-label">PnL Thực Tế (R)</label>
+                <input id="input-close-pnlr" type="number" step="any" class="form-control" x-model="closeModal.pnlR">
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+              <button class="btn btn-secondary" @click="closeModal.show = false">Hủy</button>
+              <button id="btn-confirm-close-trade" class="btn btn-primary" @click="confirmCloseTrade()">Xác Nhận Đóng Lệnh</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- IMAGE LIGHTBOX MODAL -->
+        <div class="modal-overlay" x-show="imageModal.show" x-transition.opacity @click.self="imageModal.show = false">
+          <div class="modal-card" style="max-width: 850px;">
+            <div class="modal-header">
+              <h3 class="modal-title" x-text="imageModal.title"></h3>
+              <button class="close-modal-btn" @click="imageModal.show = false">&times;</button>
+            </div>
+            <div style="text-align: center; overflow: hidden; border-radius: 8px; max-height: 550px; background: #000;">
+              <img :src="imageModal.url" alt="Chart Setup" style="max-width: 100%; max-height: 550px; object-fit: contain;">
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- MODULE 3: TẠO LỆNH MỚI (ENHANCED FORM MATCHING REFERENCE DESIGN) -->
+      <section id="module-taolenh" x-show="activeModule === 'taoLenh'" x-data="taoLenhModule()">
+        <div class="glass-card" style="max-width: 960px; margin: 0 auto; padding: 28px;">
+          
+          <!-- Header Title Banner -->
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #0284c7, #3b82f6); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px;">✨</div>
+              <div>
+                <h2 style="font-family: var(--font-heading); font-size: 20px; font-weight: 700; color: #fff;">Ghi Nhận Lệnh Chuẩn 5% Vốn • AI Vision</h2>
+                <span style="font-size: 12.5px; color: var(--text-muted);">Tự động tính R:R, Lot size và hỗ trợ AI đọc chart Entry/TP/SL</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 1. AI ASSISTANT & QUICK INPUT BAR -->
+          <div class="ai-assistant-banner">
+            <div class="ai-assistant-header">
+              <span>🤖 AI ASSISTANT: TỰ ĐỘNG XEM ENTRY • STOP LOSS • TAKE PROFIT • R:R</span>
+            </div>
+            <div class="ai-input-row">
+              <button type="button" class="ai-scan-btn" @click="aiScanChart()" :disabled="isAiScanning">
+                <span x-text="isAiScanning ? '⏳ AI Đang Quét...' : '🤖 ☕ AI Quét Ảnh Chart Đang Chọn (LTF/HTF)'"></span>
+              </button>
+
+              <div style="position: relative; flex: 1; display: flex; gap: 6px;">
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  style="font-size: 13px;"
+                  placeholder="⚡ GÕ NHANH 3 SỐ (VD: 1780 1763 1819 -> Entry • SL • TP) hoặc dán text..." 
+                  x-model="quick3Input"
+                  @keyup.enter="parseQuick3Numbers()">
+                <button type="button" class="btn btn-primary" style="white-space: nowrap; font-size: 13px;" @click="parseQuick3Numbers()">
+                  ⚡ Điền Nhanh Siêu Tốc
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. FORM KPI SUMMARY CARDS BAR -->
+          <div class="form-kpi-grid">
+            <div class="form-kpi-card">
+              <span class="form-kpi-label">1. VỐN TÍCH LŨY HIỆN TẠI (CỘNG DỒN PNL)</span>
+              <span class="form-kpi-val" x-text="'$' + (stats.von_hien_tai || 10000).toLocaleString('en-US')"></span>
+            </div>
+            <div class="form-kpi-card">
+              <span class="form-kpi-label">2. KHÓA RỦI RO (5% HOẶC TÙY CHỈNH $)</span>
+              <span class="form-kpi-val" style="color: #f59e0b;" x-text="'$' + computedRiskDollar"></span>
+            </div>
+            <div class="form-kpi-card">
+              <span class="form-kpi-label">3. KHỐI LƯỢNG NÊN ĐỊ ($ & LOTS)</span>
+              <span class="form-kpi-val" style="color: #0ea5e9;" x-text="'$' + computedVolumeUsd.toLocaleString() + ' (' + computedLots + ' Lots)'"></span>
+            </div>
+          </div>
+
+          <!-- 3. DISCIPLINE R:R BANNER -->
+          <div class="rr-discipline-banner">
+            <div>
+              <div style="font-size: 12px; font-weight: 700; color: var(--status-running); text-transform: uppercase; letter-spacing: 0.5px;">
+                R:R • TỶ LỆ LỢI NHUẬN / RỦI RO (R:R RATIO • LINH ĐỘNG 1.5R – 3R)
+              </div>
+              <div style="font-family: var(--font-heading); font-size: 26px; font-weight: 800; color: var(--text-main); margin-top: 2px;">
+                <span x-text="'1 : ' + computedRR"></span>
+                <span style="font-size: 15px; color: var(--text-muted); font-weight: 500;" x-text="' (+' + computedRR + ' R ~ +$' + computedRewardDollar + ')'"></span>
+              </div>
+            </div>
+            <div>
+              <template x-if="computedRR >= 2.0">
+                <span class="rr-badge-pass">✓ Chuẩn R:R Kỷ Luật (>= 1:2.0)</span>
+              </template>
+              <template x-if="computedRR > 0 && computedRR < 2.0">
+                <span class="rr-badge-warn">⚠️ R:R Thấp (< 1:2.0)</span>
+              </template>
+            </div>
+          </div>
+
+          <!-- 4. MAIN FORM FIELDS -->
+          <form @submit.prevent="submitNewTrade()">
+            <div class="form-grid" style="margin-bottom: 24px;">
+              
+              <!-- Cặp Giao Dịch -->
+              <div class="form-group">
+                <label class="form-label" for="input-cap-tien">Cặp Giao Dịch *</label>
+                <input id="input-cap-tien" type="text" class="form-control" placeholder="ETHUSDT, BTCUSDT..." x-model="form.cap_tien" required>
+                <div class="chip-group">
+                  <template x-for="p in quickPairs" :key="p">
+                    <span class="quick-chip" @click="selectPair(p)" x-text="p"></span>
+                  </template>
+                </div>
+              </div>
+
+              <!-- Vị Thế (LONG/SHORT) -->
+              <div class="form-group">
+                <label class="form-label">Vị Thế *</label>
+                <div class="direction-toggle">
+                  <div 
+                    class="direction-btn" 
+                    :class="{ 'selected-long': form.huong === 'LONG' }"
+                    @click="form.huong = 'LONG'">
+                    🟢 LONG / BUY
+                  </div>
+                  <div 
+                    class="direction-btn" 
+                    :class="{ 'selected-short': form.huong === 'SHORT' }"
+                    @click="form.huong = 'SHORT'">
+                    🔴 SHORT / SELL
+                  </div>
+                </div>
+              </div>
+
+              <!-- Ngày Vào Lệnh -->
+              <div class="form-group">
+                <label class="form-label" for="input-ngay">Ngày Vào Lệnh</label>
+                <input id="input-ngay" type="date" class="form-control" x-model="form.ngay_gio" required>
+              </div>
+
+              <!-- Giá Entry -->
+              <div class="form-group">
+                <label class="form-label" for="input-entry">Giá Entry *</label>
+                <input id="input-entry" type="number" step="any" class="form-control" placeholder="0.00" x-model="form.entry_price" required>
+              </div>
+
+              <!-- Giá Stop Loss -->
+              <div class="form-group">
+                <label class="form-label" for="input-sl">Giá Stop Loss (STL) *</label>
+                <input id="input-sl" type="number" step="any" class="form-control" placeholder="0.00" x-model="form.stop_loss" required>
+              </div>
+
+              <!-- Giá Take Profit (TP) + Quick Buttons -->
+              <div class="form-group">
+                <div class="form-label">
+                  <span>Giá Take Profit (TP)</span>
+                  <div class="quick-r-group">
+                    <span class="quick-r-btn" @click="setQuickTP(1.5)">1.5R</span>
+                    <span class="quick-r-btn" @click="setQuickTP(2.0)">2R</span>
+                    <span class="quick-r-btn" @click="setQuickTP(3.0)">3R</span>
+                  </div>
+                </div>
+                <input id="input-tp" type="number" step="any" class="form-control" placeholder="0.00" x-model="form.take_profit" required>
+              </div>
+
+              <!-- Rủi Ro Lệnh Này ($ Risk) -->
+              <div class="form-group">
+                <label class="form-label" for="input-risk-dollar">Rủi Ro Lệnh Này ($ Risk • Mặc định 5%)</label>
+                <input id="input-risk-dollar" type="number" step="any" class="form-control" style="color: #f59e0b; font-weight: 700;" x-model="computedRiskDollar" readonly>
+              </div>
+
+              <!-- Khối Lượng (Lots / Units) -->
+              <div class="form-group">
+                <label class="form-label" for="input-lots">Khối Lượng (Lots / Units)</label>
+                <input id="input-lots" type="number" step="any" class="form-control" placeholder="0.00" x-model="computedLots" readonly>
+              </div>
+
+              <!-- Khối Lượng theo Tiền ($ Value) -->
+              <div class="form-group">
+                <label class="form-label" for="input-value-usd">Khối Lượng theo Tiền ($ Value)</label>
+                <input id="input-value-usd" type="text" class="form-control" placeholder="Giá trị USD lệnh" :value="'$' + computedVolumeUsd.toLocaleString()" readonly>
+              </div>
+
+              <!-- Trạng Thái Lệnh -->
+              <div class="form-group">
+                <label class="form-label" for="select-trangthai">Trạng Thái Lệnh</label>
+                <select id="select-trangthai" class="form-control" x-model="form.trang_thai">
+                  <option value="DANG_CHAY">⏳ Đang chạy (Running)</option>
+                  <option value="WIN">💚 WIN (Chốt Lời)</option>
+                  <option value="LOSS">❤️ LOSS (Cắt Lỗ)</option>
+                  <option value="BE">🟣 BE (Hòa Vốn)</option>
+                </select>
+              </div>
+
+              <!-- Kết quả PnL ($) -->
+              <div class="form-group full-width">
+                <div class="form-label">
+                  <span>Kết quả PnL ($)</span>
+                  <span class="quick-r-btn" style="background: rgba(14, 165, 233, 0.2); color: #0ea5e9;" @click="autoCalculatePnL()">⚡ Tự động tính theo SL/TP</span>
+                </div>
+                <input id="input-pnl-usd" type="number" step="any" class="form-control" placeholder="0.00" x-model="form.pnl_usd">
+              </div>
+
+            </div>
+
+            <!-- 5. DÁN ÁNH 3 KHUNG THỜI GIAN (HTF / MTF / LTF DRAG & DROP & CLIPBOARD PASTE) -->
+            <div style="margin-bottom: 24px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+              <h3 style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+                📷 Dán Ảnh 3 Khung Thời Gian
+              </h3>
+              <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 14px;">
+                PC: Bấm vùng ảnh → Ctrl+V • Mobile: Bấm nút 📷 chọn ảnh từ thư viện. Sau đó bấm AI Quét Ảnh Chart để AI tự đọc lệnh
+              </p>
+
+              <div class="timeframe-grid">
+                
+                <!-- 1. HTF -->
+                <div 
+                  class="timeframe-dropzone" 
+                  @dragover.prevent="$el.classList.add('drag-over')" 
+                  @dragleave.prevent="$el.classList.remove('drag-over')"
+                  @drop="handleDrop($event, 'htf')"
+                  @paste="handlePaste($event, 'htf')"
+                  tabindex="0">
+                  <template x-if="form.anh_htf">
+                    <div style="position: relative; width: 100%;">
+                      <img :src="form.anh_htf" class="dropzone-preview" alt="HTF Chart">
+                      <button type="button" class="dropzone-remove" @click.stop="removeImage('htf')">&times;</button>
+                    </div>
+                  </template>
+                  <template x-if="!form.anh_htf">
+                    <div>
+                      <div style="font-size: 32px; margin-bottom: 6px;">🖼️</div>
+                      <div style="font-size: 13.5px; font-weight: 700;">1. Khung Lớn (HTF)</div>
+                      <div style="font-size: 11.5px; color: var(--text-dim); margin: 4px 0 10px 0;">PC: Bấm đây → Ctrl+V</div>
+                      <label class="btn btn-sm btn-secondary" style="cursor: pointer;">
+                        📷 Chọn ảnh (Mobile)
+                        <input type="file" accept="image/*" style="display: none;" @change="handleFileSelect($event, 'htf')">
+                      </label>
+                    </div>
+                  </template>
+                </div>
+
+                <!-- 2. MTF -->
+                <div 
+                  class="timeframe-dropzone" 
+                  @dragover.prevent="$el.classList.add('drag-over')" 
+                  @dragleave.prevent="$el.classList.remove('drag-over')"
+                  @drop="handleDrop($event, 'mtf')"
+                  @paste="handlePaste($event, 'mtf')"
+                  tabindex="0">
+                  <template x-if="form.anh_mtf">
+                    <div style="position: relative; width: 100%;">
+                      <img :src="form.anh_mtf" class="dropzone-preview" alt="MTF Chart">
+                      <button type="button" class="dropzone-remove" @click.stop="removeImage('mtf')">&times;</button>
+                    </div>
+                  </template>
+                  <template x-if="!form.anh_mtf">
+                    <div>
+                      <div style="font-size: 32px; margin-bottom: 6px;">🖼️</div>
+                      <div style="font-size: 13.5px; font-weight: 700;">2. Khung Trung (MTF)</div>
+                      <div style="font-size: 11.5px; color: var(--text-dim); margin: 4px 0 10px 0;">PC: Bấm đây → Ctrl+V</div>
+                      <label class="btn btn-sm btn-secondary" style="cursor: pointer;">
+                        📷 Chọn ảnh (Mobile)
+                        <input type="file" accept="image/*" style="display: none;" @change="handleFileSelect($event, 'mtf')">
+                      </label>
+                    </div>
+                  </template>
+                </div>
+
+                <!-- 3. LTF -->
+                <div 
+                  class="timeframe-dropzone" 
+                  style="border-color: rgba(59, 130, 246, 0.4);"
+                  @dragover.prevent="$el.classList.add('drag-over')" 
+                  @dragleave.prevent="$el.classList.remove('drag-over')"
+                  @drop="handleDrop($event, 'ltf')"
+                  @paste="handlePaste($event, 'ltf')"
+                  tabindex="0">
+                  <template x-if="form.anh_ltf">
+                    <div style="position: relative; width: 100%;">
+                      <img :src="form.anh_ltf" class="dropzone-preview" alt="LTF Chart">
+                      <button type="button" class="dropzone-remove" @click.stop="removeImage('ltf')">&times;</button>
+                    </div>
+                  </template>
+                  <template x-if="!form.anh_ltf">
+                    <div>
+                      <div style="font-size: 32px; margin-bottom: 6px;">🖼️</div>
+                      <div style="font-size: 13.5px; font-weight: 700; color: var(--status-running);">3. Khung Vào Lệnh (LTF)</div>
+                      <div style="font-size: 11.5px; color: var(--text-dim); margin: 4px 0 10px 0;">PC: Bấm đây → Ctrl+V</div>
+                      <label class="btn btn-sm btn-primary" style="cursor: pointer;">
+                        📷 Chọn ảnh (Mobile)
+                        <input type="file" accept="image/*" style="display: none;" @change="handleFileSelect($event, 'ltf')">
+                      </label>
+                    </div>
+                  </template>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- 6. GHI CHÚ & SETUP LOẠI LỆNH -->
+            <div class="form-grid" style="margin-bottom: 24px;">
+              <div class="form-group" style="grid-column: span 2;">
+                <label class="form-label" for="textarea-review">Ghi Chú & Bài Học Rút Ra (Review Lệnh)</label>
+                <textarea id="textarea-review" class="form-control" rows="2" placeholder="VD: Chờ đúng vùng cản H4, kiên nhẫn không FOMO..." x-model="form.ghi_chu"></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="input-setup-type">Setup / Loại Lệnh</label>
+                <input id="input-setup-type" type="text" class="form-control" placeholder="Price Action, SMC, Breakout..." x-model="form.loai_setup">
+              </div>
+            </div>
+
+            <!-- 7. TRẠNG THÁI TÂM LÝ SELECTOR CARDS -->
+            <div style="margin-bottom: 28px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+              <h3 style="font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+                <span>🧘 Trạng Thái Tâm Lý • Thiền Vipassana • Năng Lượng Khi Vào Lệnh:</span>
+                <span style="color: var(--accent-long);" x-text="form.tam_ly"></span>
+              </h3>
+
+              <div class="mindset-grid">
+                <template x-for="m in mindsetOptions" :key="m.id">
+                  <div 
+                    class="mindset-card" 
+                    :class="{ 'selected': form.tam_ly === m.title }"
+                    @click="form.tam_ly = m.title">
+                    <div class="mindset-title" x-text="m.title"></div>
+                    <div class="mindset-desc" x-text="m.desc"></div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div style="text-align: right;">
+              <button id="btn-submit-trade" type="submit" class="btn btn-primary" style="padding: 14px 32px; font-size: 16px; width: 100%;">
+                💾 Ghi Nhận Lệnh Vào Nhật Ký
+              </button>
+            </div>
+
+          </form>
+
+        </div>
+      </section>
+
+      <!-- MODULE 4: CẤU HÌNH HỆ THỐNG -->
+      <section id="module-caidat" x-show="activeModule === 'caiDat'" x-data="caiDatModule()">
+        <div class="glass-card" style="max-width: 650px; margin: 0 auto;">
+          <h2 style="font-family: var(--font-heading); font-size: 22px; font-weight: 700; margin-bottom: 20px;">Cấu Hình Hệ Thống</h2>
+
+          <form @submit.prevent="saveSettings()">
+            <div class="form-group" style="margin-bottom: 18px;">
+              <label class="form-label" for="input-von-goc">Vốn Gốc Mặc Định (USD)</label>
+              <input id="input-von-goc" type="number" step="any" class="form-control" x-model="configForm.von_goc" required>
+              <span style="font-size: 12px; color: var(--text-dim);">Số vốn ban đầu để hệ thống tự động cộng/trừ PnL tính ra vốn hiện tại.</span>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 18px;">
+              <label class="form-label" for="input-risk-macdinh">Tỷ Lệ Risk Mặc Định Mỗi Lệnh (%)</label>
+              <input id="input-risk-macdinh" type="number" step="any" class="form-control" x-model="configForm.risk_percent_mac_dinh" required>
+              <span style="font-size: 12px; color: var(--text-dim);">Mức rủi ro mặc định làm căn cứ đề xuất rủi ro cho các lệnh mới (Mặc định 5%).</span>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 24px;">
+              <label class="form-label" for="input-api-url">URL Google Apps Script Web App Endpoint</label>
+              <input id="input-api-url" type="url" class="form-control" placeholder="https://script.google.com/macros/s/XXXXX/exec" x-model="configForm.apiUrl">
+              <span style="font-size: 12px; color: var(--text-dim);">Dán Web App URL thu được sau khi Deploy Google Apps Script dưới dạng Executable Web App. (Để trống sẽ tự chạy Demo mode offline).</span>
+            </div>
+
+            <div style="text-align: right;">
+              <button id="btn-save-settings" type="submit" class="btn btn-primary" style="padding: 12px 24px;">
+                💾 Lưu Cấu Hình
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- TOAST NOTIFICATION -->
+    <div class="toast-container" x-show="toast.show" x-transition.opacity>
+      <div class="toast" :class="toast.type === 'success' ? 'toast-success' : 'toast-error'">
+        <span x-text="toast.type === 'success' ? '✅' : '⚠️'"></span>
+        <span x-text="toast.message"></span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- APP SCRIPT JS -->
+  <script src="app.js"></script>
+
+</body>
+</html>

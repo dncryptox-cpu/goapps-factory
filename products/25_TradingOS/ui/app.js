@@ -846,7 +846,10 @@ function caiDatModule() {
     configForm: {
       von_goc: 10000,
       risk_percent_mac_dinh: 5,
-      apiUrl: localStorage.getItem('tradingos_api_url') || ''
+      apiUrl: localStorage.getItem('tradingos_api_url') || '',
+      sheet_id: localStorage.getItem('tradingos_sheet_id') || '',
+      drive_folder_id: localStorage.getItem('tradingos_drive_folder_id') || '',
+      refresh_token: localStorage.getItem('tradingos_refresh_token') || ''
     },
 
     init() {
@@ -860,6 +863,9 @@ function caiDatModule() {
     async saveSettings() {
       const app = Alpine.$data(document.body);
       localStorage.setItem('tradingos_api_url', this.configForm.apiUrl.trim());
+      localStorage.setItem('tradingos_sheet_id', this.configForm.sheet_id.trim());
+      localStorage.setItem('tradingos_drive_folder_id', this.configForm.drive_folder_id.trim());
+      localStorage.setItem('tradingos_refresh_token', this.configForm.refresh_token.trim());
       app.apiUrl = this.configForm.apiUrl.trim();
 
       const patch = {
@@ -869,7 +875,8 @@ function caiDatModule() {
 
       try {
         if (app.apiUrl && app.apiUrl.trim() !== '') {
-          const res = await fetch(app.apiUrl, {
+          // 1. Save standard config
+          await fetch(app.apiUrl, {
             method: 'POST',
             body: JSON.stringify({
               action: 'capNhatConfig',
@@ -879,9 +886,24 @@ function caiDatModule() {
               }
             })
           });
-          const data = await res.json();
-          if (data && data.success) {
-            app.showToast('💾 Đã lưu và đồng bộ cấu hình thành công!');
+
+          // 2. Save personal storage config (Ghi chú bổ sung #5)
+          const storageRes = await fetch(app.apiUrl, {
+            method: 'POST',
+            body: JSON.stringify({
+              action: 'capNhatStorageCaNhan',
+              payload: {
+                token: app.token,
+                sheet_id: this.configForm.sheet_id.trim(),
+                drive_folder_id: this.configForm.drive_folder_id.trim(),
+                refresh_token: this.configForm.refresh_token.trim()
+              }
+            })
+          });
+
+          const storageData = await storageRes.json();
+          if (storageData && storageData.success) {
+            app.showToast('💾 Đã lưu cấu hình nơi lưu trữ cá nhân thành công!');
             await app.fetchSheetData();
             return;
           }

@@ -790,9 +790,33 @@
               <span style="font-size: 12px; color: var(--text-dim);">Dán Web App URL thu được sau khi Deploy Google Apps Script dưới dạng Executable Web App. (Để trống sẽ tự chạy Demo mode offline).</span>
             </div>
 
+            <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 24px 0;">
+
+            <h3 style="font-family: var(--font-heading); font-size: 18px; font-weight: 700; margin-bottom: 16px; color: var(--accent-primary);">
+              📁 Cấu Hình Lưu Trữ Cá Nhân (Mô Hình Lai #5)
+            </h3>
+
+            <div class="form-group" style="margin-bottom: 18px;">
+              <label class="form-label" for="input-sheet-id">ID Google Sheet Cá Nhân (Lưu Lệnh)</label>
+              <input id="input-sheet-id" type="text" class="form-control" placeholder="VD: 1B8QkFekvKokZGWWs1vnA_FEB44Pz5ar28_C6u59GYIo" x-model="configForm.sheet_id">
+              <span style="font-size: 12px; color: var(--text-dim);">Dán ID Google Sheet riêng của bạn để lưu toàn bộ Lệnh giao dịch cá nhân. (Để trống sẽ dùng Sheet trung tâm GoApps).</span>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 18px;">
+              <label class="form-label" for="input-drive-folder-id">ID Thư Mục Google Drive Cá Nhân (Lưu Ảnh Chart)</label>
+              <input id="input-drive-folder-id" type="text" class="form-control" placeholder="VD: 1a2b3c4d5e6f7g8h9i..." x-model="configForm.drive_folder_id">
+              <span style="font-size: 12px; color: var(--text-dim);">Dán ID Thư mục Google Drive cá nhân để tự động nhận toàn bộ ảnh Chart nến. (Để trống sẽ tạo Folder GoApps_TradingOS_Images).</span>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 24px;">
+              <label class="form-label" for="input-refresh-token">Google OAuth Refresh Token (Ủy quyền Drive cá nhân)</label>
+              <input id="input-refresh-token" type="text" class="form-control" placeholder="Dán Refresh Token để ứng dụng ghi ảnh trực tiếp vào Drive cá nhân" x-model="configForm.refresh_token">
+              <span style="font-size: 12px; color: var(--text-dim);">Tùy chọn: Nhập OAuth Refresh Token để cấp quyền lưu ảnh trực tiếp vào Google Drive cá nhân của bạn.</span>
+            </div>
+
             <div style="text-align: right;">
               <button id="btn-save-settings" type="submit" class="btn btn-primary" style="padding: 12px 24px;">
-                💾 Lưu Cấu Hình
+                💾 Lưu Tất Cả Cấu Hình
               </button>
             </div>
           </form>

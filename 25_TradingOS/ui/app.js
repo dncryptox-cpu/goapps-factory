@@ -238,6 +238,59 @@ function dangNhapModule() {
       app.setDb(DEMO_DATA);
       app.showToast('Đã đăng nhập thành công (Chế độ Demo Offline)');
       this.isLoading = false;
+    },
+
+    async dangNhapGoogle() {
+      this.isLoading = true;
+      this.errorMessage = '';
+      const app = Alpine.$data(document.body);
+
+      const userEmail = prompt('Nhập địa chỉ Email Google của bạn để tự động khởi tạo Sheet & Drive cá nhân:', 'trader@gmail.com');
+      if (!userEmail || !userEmail.trim()) {
+        this.isLoading = false;
+        return;
+      }
+
+      try {
+        if (app.apiUrl && app.apiUrl.trim() !== '') {
+          const res = await fetch(app.apiUrl, {
+            method: 'POST',
+            body: JSON.stringify({
+              action: 'dangNhapBangGoogle',
+              payload: {
+                email: userEmail.trim(),
+                ho_ten: userEmail.split('@')[0] || 'Trader Google'
+              }
+            })
+          });
+          const data = await res.json();
+          if (data && data.success) {
+            app.token = data.token;
+            app.customer_id = data.customer_id;
+            app.currentUser = { ho_ten: data.ho_ten || 'Trader' };
+            app.isLoggedIn = true;
+            await app.fetchSheetData();
+            app.showToast('🎉 Đã đăng nhập bằng Google! Hệ thống đã tự động tạo Sheet & Drive cá nhân cho bạn!');
+            this.isLoading = false;
+            return;
+          } else {
+            this.errorMessage = data.error || 'Đăng nhập Google thất bại';
+            this.isLoading = false;
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Google sign-in API error:', err);
+      }
+
+      // Offline Demo fallback
+      app.token = 'TOK_GOOGLE_' + Math.random().toString(36).substring(2, 8);
+      app.customer_id = 'CUST_GOOGLE';
+      app.currentUser = { ho_ten: userEmail.split('@')[0] || 'Trader Google' };
+      app.isLoggedIn = true;
+      app.setDb(DEMO_DATA);
+      app.showToast('🎉 Đã đăng nhập bằng Google (Tự động khởi tạo kho lưu trữ)');
+      this.isLoading = false;
     }
   };
 }

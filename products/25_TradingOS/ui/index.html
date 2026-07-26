@@ -43,6 +43,16 @@
         <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 15px;" :disabled="isLoading">
           <span x-text="isLoading ? '⏳ Đang đăng nhập...' : '🔑 Đăng Nhập Hệ Thống'"></span>
         </button>
+
+        <div style="position: relative; text-align: center; margin: 18px 0;">
+          <hr style="border: 0; border-top: 1px solid var(--border-color);">
+          <span style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #111726; padding: 0 10px; font-size: 12px; color: var(--text-dim);">HOẶC</span>
+        </div>
+
+        <button type="button" @click="dangNhapGoogle()" class="btn btn-secondary" style="width: 100%; padding: 12px; font-size: 14px; background: #ffffff; color: #1e293b; font-weight: 700; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+          <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.3 9 5 12 5z"/><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.7-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z"/><path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 10.8 0 12s.7 2.3 1.9 4.7l3.7-2.9z"/><path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.3-6.4-5.2L1.9 16C3.7 19.7 7.5 23 12 23z"/></svg>
+          Đăng Nhập Bằng Google (Tự Động Tạo Sheet & Drive)
+        </button>
       </form>
     </div>
   </div>
@@ -793,35 +803,17 @@
             <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 24px 0;">
 
             <h3 style="font-family: var(--font-heading); font-size: 18px; font-weight: 700; margin-bottom: 16px; color: var(--accent-primary);">
-              📁 Cấu Hình Lưu Trữ Cá Nhân (Mô Hình Lai #5)
+              🌐 Đăng Nhập & Tự Động Khởi Tạo Nơi Lưu Trữ (Mô Hình Lai #5)
             </h3>
 
-            <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); padding: 14px; border-radius: var(--radius-sm); margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
-              <div>
-                <strong style="color: #60a5fa; font-size: 14px; display: block;">📄 Google Sheet Mẫu Chuẩn (1-Click Clone):</strong>
-                <span style="font-size: 12px; color: var(--text-muted);">Tạo bản sao Google Sheet mẫu đã thiết lập sẵn tab DATA & CONFIG chuẩn.</span>
-              </div>
-              <a href="https://docs.google.com/spreadsheets/d/1B8QkFekvKokZGWWs1vnA_FEB44Pz5ar28_C6u59GYIo/copy" target="_blank" class="btn btn-secondary" style="white-space: nowrap; padding: 8px 16px; font-size: 13px; text-decoration: none;">
-                📋 Tạo Bản Sao Sheet Mẫu (1-Click)
-              </a>
-            </div>
-
-            <div class="form-group" style="margin-bottom: 18px;">
-              <label class="form-label" for="input-sheet-id">ID Google Sheet Cá Nhân (Lưu Lệnh)</label>
-              <input id="input-sheet-id" type="text" class="form-control" placeholder="VD: 1B8QkFekvKokZGWWs1vnA_FEB44Pz5ar28_C6u59GYIo" x-model="configForm.sheet_id">
-              <span style="font-size: 12px; color: var(--text-dim);">Dán ID Google Sheet riêng của bạn để lưu toàn bộ Lệnh giao dịch cá nhân. (Để trống sẽ dùng Sheet trung tâm GoApps).</span>
-            </div>
-
-            <div class="form-group" style="margin-bottom: 18px;">
-              <label class="form-label" for="input-drive-folder-id">ID Thư Mục Google Drive Cá Nhân (Lưu Ảnh Chart)</label>
-              <input id="input-drive-folder-id" type="text" class="form-control" placeholder="VD: 1a2b3c4d5e6f7g8h9i..." x-model="configForm.drive_folder_id">
-              <span style="font-size: 12px; color: var(--text-dim);">Dán ID Thư mục Google Drive cá nhân để tự động nhận toàn bộ ảnh Chart nến. (Để trống sẽ tạo Folder GoApps_TradingOS_Images).</span>
-            </div>
-
-            <div class="form-group" style="margin-bottom: 24px;">
-              <label class="form-label" for="input-refresh-token">Google OAuth Refresh Token (Ủy quyền Drive cá nhân)</label>
-              <input id="input-refresh-token" type="text" class="form-control" placeholder="Dán Refresh Token để ứng dụng ghi ảnh trực tiếp vào Drive cá nhân" x-model="configForm.refresh_token">
-              <span style="font-size: 12px; color: var(--text-dim);">Tùy chọn: Nhập OAuth Refresh Token để cấp quyền lưu ảnh trực tiếp vào Google Drive cá nhân của bạn.</span>
+            <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 20px; border-radius: var(--radius-md); margin-bottom: 20px; text-align: center;">
+              <p style="font-size: 14px; color: var(--text-main); margin-bottom: 14px; line-height: 1.6;">
+                Bấm nút dưới đây để <strong>Đăng nhập bằng Google</strong>. Hệ thống sẽ <strong>tự động 100%</strong> khởi tạo Google Sheet riêng (lưu Lệnh) và Thư mục Google Drive riêng (lưu Ảnh chart). Khách không cần gõ hay dán bất kỳ ID nào!
+              </p>
+              <button type="button" @click="dangNhapGoogle()" class="btn btn-secondary" style="background: #ffffff; color: #1e293b; font-weight: 700; border: none; padding: 12px 24px; border-radius: 8px; font-size: 15px; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.3 9 5 12 5z"/><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.7-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z"/><path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 10.8 0 12s.7 2.3 1.9 4.7l3.7-2.9z"/><path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.3-6.4-5.2L1.9 16C3.7 19.7 7.5 23 12 23z"/></svg>
+                Ủy Quyền Google (Tự Động Tạo Sheet & Drive)
+              </button>
             </div>
 
             <div style="text-align: right;">

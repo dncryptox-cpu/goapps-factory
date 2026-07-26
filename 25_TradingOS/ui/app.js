@@ -256,9 +256,9 @@ function dangNhapModule() {
           const res = await fetch(app.apiUrl, {
             method: 'POST',
             body: JSON.stringify({
-              action: 'dangNhapBangGoogle',
+              action: 'dangNhapBangGoogleOAuth',
               payload: {
-                email: userEmail.trim(),
+                email_google: userEmail.trim(),
                 ho_ten: userEmail.split('@')[0] || 'Trader Google'
               }
             })
@@ -270,11 +270,11 @@ function dangNhapModule() {
             app.currentUser = { ho_ten: data.ho_ten || 'Trader' };
             app.isLoggedIn = true;
             await app.fetchSheetData();
-            app.showToast('🎉 Đã đăng nhập bằng Google! Hệ thống đã tự động tạo Sheet & Drive cá nhân cho bạn!');
+            app.showToast('🎉 Đăng nhập Google (Chuẩn #7)! Hệ thống đã tự động tạo Sheet & Drive cá nhân cho bạn!');
             this.isLoading = false;
             return;
           } else {
-            this.errorMessage = data.error || 'Đăng nhập Google thất bại';
+            this.errorMessage = data.error || 'Đăng nhập Google OAuth thất bại';
             this.isLoading = false;
             return;
           }

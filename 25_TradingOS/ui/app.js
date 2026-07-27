@@ -238,59 +238,6 @@ function dangNhapModule() {
       app.setDb(DEMO_DATA);
       app.showToast('Đã đăng nhập thành công (Chế độ Demo Offline)');
       this.isLoading = false;
-    },
-
-    async dangNhapGoogle() {
-      this.isLoading = true;
-      this.errorMessage = '';
-      const app = Alpine.$data(document.body);
-
-      const userEmail = prompt('Nhập địa chỉ Email Google của bạn để tự động khởi tạo Sheet & Drive cá nhân:', 'trader@gmail.com');
-      if (!userEmail || !userEmail.trim()) {
-        this.isLoading = false;
-        return;
-      }
-
-      try {
-        if (app.apiUrl && app.apiUrl.trim() !== '') {
-          const res = await fetch(app.apiUrl, {
-            method: 'POST',
-            body: JSON.stringify({
-              action: 'dangNhapBangGoogleOAuth',
-              payload: {
-                email_google: userEmail.trim(),
-                ho_ten: userEmail.split('@')[0] || 'Trader Google'
-              }
-            })
-          });
-          const data = await res.json();
-          if (data && data.success) {
-            app.token = data.token;
-            app.customer_id = data.customer_id;
-            app.currentUser = { ho_ten: data.ho_ten || 'Trader' };
-            app.isLoggedIn = true;
-            await app.fetchSheetData();
-            app.showToast('🎉 Đăng nhập Google (Chuẩn #7)! Hệ thống đã tự động tạo Sheet & Drive cá nhân cho bạn!');
-            this.isLoading = false;
-            return;
-          } else {
-            this.errorMessage = data.error || 'Đăng nhập Google OAuth thất bại';
-            this.isLoading = false;
-            return;
-          }
-        }
-      } catch (err) {
-        console.warn('Google sign-in API error:', err);
-      }
-
-      // Offline Demo fallback
-      app.token = 'TOK_GOOGLE_' + Math.random().toString(36).substring(2, 8);
-      app.customer_id = 'CUST_GOOGLE';
-      app.currentUser = { ho_ten: userEmail.split('@')[0] || 'Trader Google' };
-      app.isLoggedIn = true;
-      app.setDb(DEMO_DATA);
-      app.showToast('🎉 Đã đăng nhập bằng Google (Tự động khởi tạo kho lưu trữ)');
-      this.isLoading = false;
     }
   };
 }
@@ -899,10 +846,7 @@ function caiDatModule() {
     configForm: {
       von_goc: 10000,
       risk_percent_mac_dinh: 5,
-      apiUrl: localStorage.getItem('tradingos_api_url') || '',
-      sheet_id: localStorage.getItem('tradingos_sheet_id') || '',
-      drive_folder_id: localStorage.getItem('tradingos_drive_folder_id') || '',
-      refresh_token: localStorage.getItem('tradingos_refresh_token') || ''
+      apiUrl: localStorage.getItem('tradingos_api_url') || ''
     },
 
     init() {
@@ -916,9 +860,6 @@ function caiDatModule() {
     async saveSettings() {
       const app = Alpine.$data(document.body);
       localStorage.setItem('tradingos_api_url', this.configForm.apiUrl.trim());
-      localStorage.setItem('tradingos_sheet_id', this.configForm.sheet_id.trim());
-      localStorage.setItem('tradingos_drive_folder_id', this.configForm.drive_folder_id.trim());
-      localStorage.setItem('tradingos_refresh_token', this.configForm.refresh_token.trim());
       app.apiUrl = this.configForm.apiUrl.trim();
 
       const patch = {
@@ -928,8 +869,7 @@ function caiDatModule() {
 
       try {
         if (app.apiUrl && app.apiUrl.trim() !== '') {
-          // 1. Save standard config
-          await fetch(app.apiUrl, {
+          const res = await fetch(app.apiUrl, {
             method: 'POST',
             body: JSON.stringify({
               action: 'capNhatConfig',
@@ -939,24 +879,9 @@ function caiDatModule() {
               }
             })
           });
-
-          // 2. Save personal storage config (Ghi chú bổ sung #5)
-          const storageRes = await fetch(app.apiUrl, {
-            method: 'POST',
-            body: JSON.stringify({
-              action: 'capNhatStorageCaNhan',
-              payload: {
-                token: app.token,
-                sheet_id: this.configForm.sheet_id.trim(),
-                drive_folder_id: this.configForm.drive_folder_id.trim(),
-                refresh_token: this.configForm.refresh_token.trim()
-              }
-            })
-          });
-
-          const storageData = await storageRes.json();
-          if (storageData && storageData.success) {
-            app.showToast('💾 Đã lưu cấu hình nơi lưu trữ cá nhân thành công!');
+          const data = await res.json();
+          if (data && data.success) {
+            app.showToast('💾 Đã lưu và đồng bộ cấu hình thành công!');
             await app.fetchSheetData();
             return;
           }
@@ -965,7 +890,6 @@ function caiDatModule() {
         console.warn('API Error saving settings:', err);
       }
 
-      // Local update
       app.setDb({ config: patch });
       app.showToast('💾 Đã lưu cấu hình thành công!');
     }

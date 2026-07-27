@@ -103,7 +103,7 @@ function appShared() {
     db: Object.freeze({ trades: [], config: {}, stats: {} }),
     _dbVersion: 0,
     isLoading: false,
-    apiUrl: localStorage.getItem('tradingos_api_url') || '',
+    apiUrl: localStorage.getItem('tradingos_api_url') || 'https://script.google.com/macros/s/AKfycbywHzeeTwShQZ0OFI9RNV-ugcVaJFOglayAUgBGmQ7Zh8JIKEyccZd11_c4_nMdILzSrg/exec',
     toast: { show: false, message: '', type: 'success' },
 
     init() {
